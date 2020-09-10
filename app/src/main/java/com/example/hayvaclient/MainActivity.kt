@@ -11,13 +11,19 @@ import android.widget.EditText
 import android.widget.Toast
 import com.example.hayvaclient.Common.Common
 import com.example.hayvaclient.Model.UserModel
+import com.example.hayvaclient.Remote.ICloudFunctions
+import com.example.hayvaclient.Remote.RetrofitCloudClient
+import com.firebase.ui.auth.AuthUI
+import com.firebase.ui.auth.IdpResponse
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.*
 import dmax.dialog.SpotsDialog
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.layout_register.*
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,9 +31,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var listener:FirebaseAuth.AuthStateListener
     private lateinit var dialog: android.app.AlertDialog
     private val compositeDisposable = CompositeDisposable()
-    private val cloudsFunctions:ICloudFunctions
+    private lateinit var cloudsFunctions: ICloudFunctions
 
     private lateinit var userRef:DatabaseReference
+    private var providers:List<AuthUI.IdpConfig>? = null
 
     companion object{
         private val APP_REQUEST_CODE = 7171
@@ -54,6 +61,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun init(){
+        providers = Arrays.asList<AuthUI.IdpConfig>(AuthUI.IdpConfig.PhoneBuilder().build())
+
         userRef = FirebaseDatabase.getInstance().getReference(Common.USER_REFERENCE)
         firebaseAuth = FirebaseAuth.getInstance()
         dialog = SpotsDialog.Builder().setContext(this).setCancelable(false).build()
@@ -61,35 +70,16 @@ class MainActivity : AppCompatActivity() {
         listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
             val user = firebaseAuth.currentUser
             if(user != null){
-
-                // Logueado
-                //Toast.makeText(this,"Logueado",Toast.LENGTH_SHORT).show()
-                AccountKit.getCurrentAccount(object:AccountKitCallback<Account>{
-                    override fun onSuccess(account:Account?){
-                        checkUserFromFirebase(user!!.uid, account!!)
-                    }
-
-                    override fun onError(p0:AccounKitError?){
-                        Toast.makeText(this@MainActivity,""+p0.errorType.message,Toast.LENGTH_SHORT).show()
-                    }
-                })
-
+                checkUserFromFirebase(user)
             }else{
-
-                //No logueado
-                val accessToken = AccountKit.getCurrentAccessToken()
-                if(accessToken != null)
-                    getCustomToken(accessToken)
-                else
-                    phoneLogin()
-
+                phoneLogin()
             }
         }
     }
 
-    private fun checkUserFromFirebase(uid: String, account: Account) {
+    private fun checkUserFromFirebase(user:FirebaseUser) {
         dialog!!.show()
-        userRef!!.child(uid)
+        userRef!!.child(user!!.uid)
             .addListenerForSingleValueEvent(object:ValueEventListener{
                 override fun onCancelled(error: DatabaseError) {
                     Toast.makeText(this@MainActivity,""+error.message,Toast.LENGTH_SHORT).show()
@@ -103,7 +93,7 @@ class MainActivity : AppCompatActivity() {
 
                     }else{
 
-                        showRegisterDialog(uid, account)
+                        showRegisterDialog(user!!)
 
                     }
 
@@ -114,7 +104,7 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
-    private fun showRegisterDialog(uid: String, account: Account) {
+    private fun showRegisterDialog(user:FirebaseUser) {
         val builder = androidx.appcompat.app.AlertDialog.Builder(this)
         builder.setTitle("REGISTER")
         builder.setMessage("Please fill information")
@@ -127,7 +117,7 @@ class MainActivity : AppCompatActivity() {
         val edit_phone = itemView.findViewById<EditText>(R.id.edt_phone)
 
         // Set
-        edit_phone.setText(account.phoneNumber.toString())
+        edit_phone.setText(user.phoneNumber)
 
         builder.setView(itemView)
         builder.setNegativeButton("CANCEL") {dialogInterface, i -> dialogInterface.dismiss() }
@@ -141,12 +131,12 @@ class MainActivity : AppCompatActivity() {
             }
 
             val userModel = UserModel()
-            userModel.uid = uid
+            userModel.uid = user!!.uid
             userModel.name = edt_name.text.toString()
             userModel.address = edt_address.text.toString()
             userModel.phone = edt_phone.text.toString()
 
-            userRef!!.child(uid)
+            userRef!!.child(user!!.uid)
                 .setValue(userModel)
                 .addOnCompleteListener{task ->
                     if(task.isSuccessful){
@@ -170,58 +160,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun phoneLogin(){
-        val intent = Intent(this@MainActivity,AccountKitActivity::class.java)
-        val configurationBuildConfig = AccountKitConfiguration.AccountKitConfigurationBuilder(LoginType.PHONE, AccountKitActivity.ResponseType.TOKEN)
-        intent.putExtra(AccountKitActivity.ACCOUNT_KIT_CONFIGURATION,configurationBuildConfig.build())
-        startActivityForResult(intent, APP_REQUEST_CODE)
+
+        startActivityForResult(AuthUI.getInstance().createSignInIntentBuilder().setAvailableProviders(providers!!).build(), APP_REQUEST_CODE)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if(requestCode == APP_REQUEST_CODE){
-            handleFacebookLoginResult(resultCode,data)
-        }
-    }
+            val response = IdpResponse.fromResultIntent(data)
+            if(resultCode == Activity.RESULT_OK){
 
-    private fun handleFacebookLoginResult(resultCode: Int, data: Intent?){
-        val result = data!!.getParcelableExtra>AccountKitLoginResult<(AccountKitLoginResult.RESULT_KEY)
-        if(result!!.error != null){
-            Toast.makeText(this,"" + result!!.error!!.userFacingMessage,Toast.LENGTH_SHORT).show()
-        } else if(result.wasCancelled() || resultCode == Activity.RESULT_CANCELED){
-            finish()
-        } else{
-            if (result.accessToken != null){
-                getCustomToken(result.accessToken!!)
-                Toast.makeText(this,"Login correcto",Toast.LENGTH_SHORT).show()
+                val user = FirebaseAuth.getInstance().currentUser
+
+            }else{
+
+                Toast.makeText(this, "El registro falló", Toast.LENGTH_SHORT).show()
+
             }
         }
-    }
-
-    private fun getCustomToken(accessToken:AccessToken){
-        dialog.show()
-        compositeDisposable.add(cloudsFunctions!!.getCustomToken(accessToken.token)
-                .suscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ responseBody ->
-
-                    val customToken = responseBody.string()
-                    signInWithCustomToken(customToken)
-
-                }, {t:Throwable? ->
-
-                    dialog!!.dismiss()
-                    Toast.makeText(this@MainActivity,""+t!!.message,Toast.LENGTH_SHORT).show()
-
-                }) )
-    }
-
-    private fun signInWithCustomToken(customToken:String){
-        dialog!!.dismiss()
-        firebaseAuth!!.signInWithCustomToken(customToken)
-                .addOnCompleteListener{ task ->
-                    if(!task.isSuccessful){
-                        Toast.makeText(this,"Autenticación fallida",Toast.LENGTH_SHORT).show()
-                    }
-                }
     }
 }
