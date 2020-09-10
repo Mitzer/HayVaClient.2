@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity() {
             .addListenerForSingleValueEvent(object:ValueEventListener{
                 override fun onCancelled(error: DatabaseError) {
                     Toast.makeText(this@MainActivity,""+error.message,Toast.LENGTH_SHORT).show()
+
                 }
 
                 override fun onDataChange(snapshot: DataSnapshot) {
@@ -132,9 +133,9 @@ class MainActivity : AppCompatActivity() {
 
             val userModel = UserModel()
             userModel.uid = user!!.uid
-            userModel.name = edt_name.text.toString()
-            userModel.address = edt_address.text.toString()
-            userModel.phone = edt_phone.text.toString()
+            userModel.name = edit_name.text.toString()
+            userModel.address = edit_address.text.toString()
+            userModel.phone = edit_phone.text.toString()
 
             userRef!!.child(user!!.uid)
                 .setValue(userModel)
