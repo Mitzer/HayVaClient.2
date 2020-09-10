@@ -15,7 +15,8 @@ object RetrofitCloudClient {
                 .addConverterFactory(GsonConverterFactory.create())
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .build()
-            return instance!!
-        }
+            }
+        return instance!!
+
     }
 }
