@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1094778147014",
+    "firebase_url": "https://iva-delivery.firebaseio.com",
+    "project_id": "iva-delivery",
+    "storage_bucket": "iva-delivery.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1094778147014:android:5e7215064c9f990ac687c7",
+        "android_client_info": {
+          "package_name": "com.example.hayvaclient"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1094778147014-theq7lbqjd7aacu1c9ci2cbuvrjsejio.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.hayvaclient",
+            "certificate_hash": "e4780abb1d98382236dd219aaf2b8b387565cfd3"
+          }
+        },
+        {
+          "client_id": "1094778147014-dmh6a6cg5js5d3h87o8r9ksmqooqu5nj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaRqDFpXojYCncP4AAVICaezoH55BdG9k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1094778147014-dmh6a6cg5js5d3h87o8r9ksmqooqu5nj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

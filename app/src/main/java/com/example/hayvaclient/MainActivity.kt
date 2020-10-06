@@ -158,6 +158,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun goToHomeActivity(userModel: UserModel?) {
         Common.currentUser = userModel!!
+        startActivity(Intent(this@MainActivity,HayVa::class.java))
+        finish()
     }
 
     private fun phoneLogin(){
